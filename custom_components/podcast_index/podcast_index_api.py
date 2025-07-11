@@ -102,13 +102,41 @@ class PodcastIndexAPI:
         # If the search term is numeric, treat it as a podcast id
         term = search_term or self.search_term
         if term and term.isdigit():
-            # Use the byfeedid endpoint (not bypodcastid)
+            # First, get the podcast feed information to get the title
             session = await self._get_session()
+            params = {
+                "id": term,
+            }
+            headers = self._generate_auth_headers()
+            try:
+                # Get podcast feed information
+                async with session.get(
+                    f"{PODCAST_INDEX_BASE_URL}/podcasts/byfeedid",
+                    params=params,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as response:
+                    response.raise_for_status()
+                    feed_data = await response.json()
+                    
+                    if feed_data.get("status") == "true" and feed_data.get("feed"):
+                        podcast = self._parse_podcast(feed_data["feed"])
+                    else:
+                        _LOGGER.warning("No podcast feed found for ID: %s", term)
+                        podcast = None
+                        
+            except aiohttp.ClientError as ex:
+                _LOGGER.error("Failed to fetch podcast feed by ID: %s", ex)
+                podcast = None
+            except Exception as ex:
+                _LOGGER.error("Unexpected error fetching podcast feed by ID: %s", ex)
+                podcast = None
+            
+            # Now get the latest episode
             params = {
                 "id": term,
                 "max": 1,  # Get only the latest episode
             }
-            headers = self._generate_auth_headers()
             try:
                 async with session.get(
                     f"{PODCAST_INDEX_BASE_URL}/episodes/byfeedid",
@@ -122,7 +150,12 @@ class PodcastIndexAPI:
                     if data.get("status") == "true" and episodes:
                         episode = episodes[0]
                         episode_data = self._parse_episode(episode)
-                        # Add podcast id and search term info
+                        # Add podcast information if available
+                        if podcast:
+                            episode_data.update({
+                                "podcast_title": podcast.get("title", ""),
+                                "feed_url": podcast.get("feed_url", ""),
+                            })
                         episode_data.update({
                             "podcast_id": term,
                             "search_term": term,

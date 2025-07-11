@@ -48,13 +48,14 @@ podcast_index_api_secret: "your_api_secret_here"
 The integration creates a sensor that shows:
 
 - **State**: The title of the latest episode
+- **Name**: The sensor name will show the podcast title when available (e.g., "PodcastIndex Tech News Latest Episode"), or fall back to the search term/ID if the title isn't available
 - **Attributes**:
   - `title`: Episode title
   - `description`: Episode description
   - `publish_date`: When the episode was published
   - `duration`: Episode duration in HH:MM:SS format
   - `audio_url`: Direct link to the audio file
-  - `podcast_title`: Name of the podcast
+  - `podcast_title`: Name of the podcast (now properly populated for both search terms and podcast IDs)
   - `episode_number`: Episode number (if available)
   - `season_number`: Season number (if available)
   - `search_or_id`: The search term or podcast ID used to find the podcast
@@ -72,6 +73,7 @@ The integration provides a single service for playing episodes:
 
 - `entity_id`: The media player entity to play the episode on
 - `search_term`: The search term or podcast ID to find the podcast (numeric values are treated as PodcastIndex podcast IDs)
+- `volume` (optional): Volume level (0-100) to set before playing. If not provided, the current volume is maintained.
 
 **Example**:
 
@@ -89,6 +91,14 @@ target:
   entity_id: media_player.kitchen_speaker
 data:
   search_term: "1234567"
+
+# Play with volume set to 50%
+service: podcast_index.search_and_play
+target:
+  entity_id: media_player.kitchen_speaker
+data:
+  search_term: "tech news"
+  volume: 50
 ```
 
 ### Automation Examples
@@ -128,6 +138,18 @@ automation:
           entity_id: media_player.office_speaker
         data:
           search_term: "1234567"
+
+  - alias: "Evening News with Volume"
+    trigger:
+      platform: time
+      at: "18:00:00"
+    action:
+      - service: podcast_index.search_and_play
+        target:
+          entity_id: media_player.living_room_speaker
+        data:
+          search_term: "evening news"
+          volume: 75
 ```
 
 ## Troubleshooting

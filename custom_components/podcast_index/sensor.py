@@ -62,8 +62,17 @@ class PodcastIndexSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._term = term
+        self._base_name = name
         self._attr_name = f"{name} {term} Latest Episode"
         self._attr_unique_id = f"{name.lower().replace(' ', '_')}_{term.lower().replace(' ', '_')}_latest_episode"
+
+    @property
+    def name(self) -> str:
+        """Return the name of the sensor."""
+        if self.coordinator.data and self.coordinator.data.get(ATTR_PODCAST_TITLE):
+            podcast_title = self.coordinator.data.get(ATTR_PODCAST_TITLE)
+            return f"{self._base_name} {podcast_title} Latest Episode"
+        return f"{self._base_name} {self._term} Latest Episode"
 
     @property
     def native_value(self) -> StateType:
