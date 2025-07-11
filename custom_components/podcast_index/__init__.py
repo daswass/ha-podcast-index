@@ -12,7 +12,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import (
     CONF_API_SECRET,
-    CONF_SEARCH_TERM,
+    CONF_SEARCH_OR_ID,
     DOMAIN,
 )
 from .podcast_index_api import PodcastIndexAPI
@@ -52,10 +52,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Failed to load API credentials from secrets: %s", ex)
         raise ConfigEntryNotReady from ex
 
-    search_term = entry.data[CONF_SEARCH_TERM]
+    search_or_id = entry.data[CONF_SEARCH_OR_ID]
     name = entry.data.get(CONF_NAME, "PodcastIndex")
 
-    api = PodcastIndexAPI(api_key, api_secret, search_term)
+    api = PodcastIndexAPI(api_key, api_secret, search_or_id)
 
     try:
         # Test the API connection
@@ -83,7 +83,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return
 
         try:
-            # Get the latest episode for the search term
+            # Get the latest episode for the search term or podcast id
             episode = await api.get_latest_episode(search_term)
             if not episode or not episode.get("audio_url"):
                 _LOGGER.error("No audio URL found for search term: %s", search_term)

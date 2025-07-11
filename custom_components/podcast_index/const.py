@@ -4,7 +4,7 @@ DOMAIN = "podcast_index"
 
 CONF_API_KEY = "api_key"
 CONF_API_SECRET = "api_secret"
-CONF_SEARCH_TERM = "search_term"
+CONF_SEARCH_OR_ID = "search_or_id"  # Can be a search term or a podcast ID
 
 DEFAULT_NAME = "PodcastIndex"
 DEFAULT_SCAN_INTERVAL = 300  # 5 minutes
@@ -23,5 +23,5 @@ ATTR_AUDIO_URL = "audio_url"
 ATTR_PODCAST_TITLE = "podcast_title"
 ATTR_EPISODE_NUMBER = "episode_number"
 ATTR_SEASON_NUMBER = "season_number"
-ATTR_SEARCH_TERM = "search_term"
+ATTR_SEARCH_OR_ID = "search_or_id"
 ATTR_FEED_URL = "feed_url" 

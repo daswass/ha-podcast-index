@@ -24,7 +24,7 @@ A Home Assistant integration that connects to the PodcastIndex API to fetch the 
 
 You'll need the following information:
 
-1. **Search Term**: A search term to find podcasts (e.g., "tech news", "comedy", "science")
+1. **Search Term or Podcast ID**: Enter a search term (e.g., "tech news", "comedy", "science") or a numeric PodcastIndex podcast ID.
 2. **API Credentials**: Your PodcastIndex API credentials (stored in secrets.yaml)
 
 ### Setting up API Credentials
@@ -57,7 +57,7 @@ The integration creates a sensor that shows:
   - `podcast_title`: Name of the podcast
   - `episode_number`: Episode number (if available)
   - `season_number`: Season number (if available)
-  - `search_term`: The search term used to find the podcast
+  - `search_or_id`: The search term or podcast ID used to find the podcast
   - `feed_url`: The RSS feed URL of the podcast
 
 ### Service
@@ -71,7 +71,7 @@ The integration provides a single service for playing episodes:
 **Parameters**:
 
 - `entity_id`: The media player entity to play the episode on
-- `search_term`: The search term to find the podcast
+- `search_term`: The search term or podcast ID to find the podcast (numeric values are treated as PodcastIndex podcast IDs)
 
 **Example**:
 
@@ -82,6 +82,13 @@ target:
   entity_id: media_player.kitchen_speaker
 data:
   search_term: "tech news"
+
+# Play the latest episode from a specific podcast by PodcastIndex ID
+service: podcast_index.search_and_play
+target:
+  entity_id: media_player.kitchen_speaker
+data:
+  search_term: "1234567"
 ```
 
 ### Automation Examples
@@ -110,6 +117,17 @@ automation:
           entity_id: media_player.living_room_speaker
         data:
           search_term: "comedy"
+
+  - alias: "Play by Podcast ID"
+    trigger:
+      platform: time
+      at: "21:00:00"
+    action:
+      - service: podcast_index.search_and_play
+        target:
+          entity_id: media_player.office_speaker
+        data:
+          search_term: "1234567"
 ```
 
 ## Troubleshooting
@@ -119,7 +137,7 @@ automation:
 1. **"Failed to connect to PodcastIndex API"**
 
    - Verify your API credentials are correctly set in secrets.yaml
-   - Check that the search term is valid
+   - Check that the search term or podcast ID is valid
    - Ensure your internet connection is working
 
 2. **"PodcastIndex API credentials not found in secrets.yaml"**
@@ -134,7 +152,7 @@ automation:
 
 3. **"No episodes found"**
 
-   - The search term might not return any results
+   - The search term or podcast ID might not return any results
    - The podcast might not have any episodes
    - The podcast might be private or require authentication
 

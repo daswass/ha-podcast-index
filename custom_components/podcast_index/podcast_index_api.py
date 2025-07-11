@@ -11,6 +11,8 @@ from .const import (
     PODCAST_INDEX_BASE_URL,
     PODCAST_INDEX_SEARCH_ENDPOINT,
     PODCAST_INDEX_EPISODES_ENDPOINT,
+    CONF_SEARCH_OR_ID,
+    ATTR_SEARCH_OR_ID,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -96,11 +98,50 @@ class PodcastIndexAPI:
             raise
 
     async def get_latest_episode(self, search_term: str | None = None) -> dict[str, Any] | None:
-        """Get the latest episode of the top podcast matching the search term."""
+        """Get the latest episode of the top podcast matching the search term or by podcast id."""
+        # If the search term is numeric, treat it as a podcast id
+        term = search_term or self.search_term
+        if term and term.isdigit():
+            # Use the bypodcastid endpoint
+            session = await self._get_session()
+            params = {
+                "id": term,
+                "max": 1,  # Get only the latest episode
+            }
+            headers = self._generate_auth_headers()
+            try:
+                async with session.get(
+                    f"{PODCAST_INDEX_BASE_URL}/episodes/bypodcastid",
+                    params=params,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    episodes = data.get("episodes") or data.get("items")
+                    if data.get("status") == "true" and episodes:
+                        episode = episodes[0]
+                        episode_data = self._parse_episode(episode)
+                        # Add podcast id and search term info
+                        episode_data.update({
+                            "podcast_id": term,
+                            "search_term": term,
+                        })
+                        return episode_data
+                    else:
+                        _LOGGER.warning("No episodes found or API returned error: %s", data)
+                        return None
+            except aiohttp.ClientError as ex:
+                _LOGGER.error("Failed to fetch latest episode by podcast id: %s", ex)
+                raise
+            except Exception as ex:
+                _LOGGER.error("Unexpected error fetching latest episode by podcast id: %s", ex)
+                raise
+        # Otherwise, use the search term as before
         # First, search for the podcast
-        podcast = await self.search_podcasts(search_term)
+        podcast = await self.search_podcasts(term)
         if not podcast or not podcast.get("feed_url"):
-            _LOGGER.warning("No podcast found for search term: %s", search_term or self.search_term)
+            _LOGGER.warning("No podcast found for search term: %s", term)
             return None
         
         # Then get the latest episode
@@ -122,7 +163,6 @@ class PodcastIndexAPI:
             ) as response:
                 response.raise_for_status()
                 data = await response.json()
-                
                 episodes = data.get("episodes") or data.get("items")
                 if data.get("status") == "true" and episodes:
                     episode = episodes[0]  # Get the first (latest) episode
@@ -131,7 +171,7 @@ class PodcastIndexAPI:
                     episode_data.update({
                         "podcast_title": podcast.get("title", ""),
                         "feed_url": podcast.get("feed_url", ""),
-                        "search_term": search_term or self.search_term,
+                        "search_term": term,
                     })
                     return episode_data
                 else:
