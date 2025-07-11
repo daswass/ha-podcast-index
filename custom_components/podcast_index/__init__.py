@@ -4,18 +4,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import voluptuous as vol
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import ConfigEntryNotReady
-import homeassistant.helpers.config_validation as cv
 
 from .const import (
     CONF_API_SECRET,
-    CONF_PODCAST_FEED_URL,
+    CONF_SEARCH_TERM,
     DOMAIN,
 )
 from .podcast_index_api import PodcastIndexAPI
@@ -24,19 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
-CONFIG_SCHEMA = vol.Schema(
-    {
-        DOMAIN: vol.Schema(
-            {
-                vol.Required(CONF_API_KEY): cv.string,
-                vol.Required(CONF_API_SECRET): cv.string,
-                vol.Required(CONF_PODCAST_FEED_URL): cv.string,
-                vol.Optional(CONF_NAME): cv.string,
-            }
-        )
-    }
-)
-
+# CONFIG_SCHEMA removed: Only config flow (UI) is supported
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up PodcastIndex from a config entry."""
@@ -67,10 +52,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Failed to load API credentials from secrets: %s", ex)
         raise ConfigEntryNotReady from ex
 
-    podcast_feed_url = entry.data[CONF_PODCAST_FEED_URL]
+    search_term = entry.data[CONF_SEARCH_TERM]
     name = entry.data.get(CONF_NAME, "PodcastIndex")
 
-    api = PodcastIndexAPI(api_key, api_secret, podcast_feed_url)
+    api = PodcastIndexAPI(api_key, api_secret, search_term)
 
     try:
         # Test the API connection
@@ -84,19 +69,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "name": name,
     }
 
-    # Register services
-    async def async_play_latest_episode(call: ServiceCall) -> None:
-        """Play the latest episode on the specified media player."""
+    # Register only the search_and_play service
+    async def async_search_and_play(call: ServiceCall) -> None:
+        """Search for a podcast and play its latest episode."""
         entity_id = call.data.get("entity_id")
+        search_term = call.data.get("search_term")
+        
         if not entity_id:
             _LOGGER.error("No entity_id provided")
             return
+        if not search_term:
+            _LOGGER.error("No search_term provided")
+            return
 
         try:
-            # Get the latest episode
-            episode = await api.get_latest_episode()
+            # Get the latest episode for the search term
+            episode = await api.get_latest_episode(search_term)
             if not episode or not episode.get("audio_url"):
-                _LOGGER.error("No audio URL found for latest episode")
+                _LOGGER.error("No audio URL found for search term: %s", search_term)
                 return
 
             # Play the episode on the media player
@@ -106,16 +96,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 {
                     "entity_id": entity_id,
                     "media_content_id": episode["audio_url"],
-                    "media_content_type": "audio/mpeg",
+                    "media_content_type": "music",
                 },
             )
-            _LOGGER.info("Playing latest episode on %s", entity_id)
+            _LOGGER.info("Playing latest episode for '%s' on %s", search_term, entity_id)
 
         except Exception as ex:
-            _LOGGER.error("Failed to play latest episode: %s", ex)
+            _LOGGER.error("Failed to search and play episode: %s", ex)
 
     hass.services.async_register(
-        DOMAIN, "play_latest_episode", async_play_latest_episode
+        DOMAIN, "search_and_play", async_search_and_play
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -128,7 +118,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
         # Unregister services
-        hass.services.async_remove(DOMAIN, "play_latest_episode")
+        hass.services.async_remove(DOMAIN, "search_and_play")
 
     return unload_ok
 

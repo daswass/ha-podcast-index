@@ -1,6 +1,6 @@
-play_latest_episode:
-  name: Play Latest Episode
-  description: Play the latest episode of the configured podcast on a media player
+search_and_play:
+  name: Search and Play
+  description: Search for a podcast by term and play its latest episode on a media player
   target:
     entity:
       integration: media_player
@@ -11,4 +11,10 @@ play_latest_episode:
       selector:
         entity:
           domain: media_player
+      required: true
+    search_term:
+      name: Search Term
+      description: The search term to find the podcast
+      selector:
+        text:
       required: true 

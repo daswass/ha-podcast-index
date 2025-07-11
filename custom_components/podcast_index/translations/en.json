@@ -3,15 +3,15 @@
     "step": {
       "user": {
         "data": {
-          "podcast_feed_url": "Podcast Feed URL",
+          "search_term": "Search Term",
           "name": "Name"
         },
-        "description": "Enter the podcast feed URL. API credentials will be loaded from secrets.yaml.",
+        "description": "Enter a search term to find podcasts. The integration will track the top result. API credentials will be loaded from secrets.yaml.",
         "title": "PodcastIndex"
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to PodcastIndex API. Please check your credentials in secrets.yaml and podcast feed URL.",
+      "cannot_connect": "Failed to connect to PodcastIndex API. Please check your credentials in secrets.yaml and search term.",
       "missing_credentials": "PodcastIndex API credentials not found in secrets.yaml. Please add podcast_index_api_key and podcast_index_api_secret to your secrets.yaml file.",
       "secrets_error": "Failed to load secrets.yaml file. Please check the file format and permissions."
     },

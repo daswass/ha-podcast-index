@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
 
-from .const import CONF_PODCAST_FEED_URL, DOMAIN
+from .const import CONF_SEARCH_TERM, DOMAIN
 from .podcast_index_api import PodcastIndexAPI
 
 _LOGGER = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class PodcastIndexConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 api = PodcastIndexAPI(
                     self._api_key,
                     self._api_secret,
-                    user_input[CONF_PODCAST_FEED_URL],
+                    user_input[CONF_SEARCH_TERM],
                 )
                 await api.test_connection()
                 await api.close()
@@ -76,7 +76,7 @@ class PodcastIndexConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(
                     title=user_input.get(CONF_NAME, "PodcastIndex"),
                     data={
-                        CONF_PODCAST_FEED_URL: user_input[CONF_PODCAST_FEED_URL],
+                        CONF_SEARCH_TERM: user_input[CONF_SEARCH_TERM],
                         CONF_NAME: user_input.get(CONF_NAME, "PodcastIndex"),
                     },
                 )
@@ -89,7 +89,7 @@ class PodcastIndexConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_PODCAST_FEED_URL): str,
+                    vol.Required(CONF_SEARCH_TERM): str,
                     vol.Optional(CONF_NAME, default="PodcastIndex"): str,
                 }
             ),

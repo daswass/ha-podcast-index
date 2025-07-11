@@ -25,7 +25,8 @@ from .const import (
     ATTR_PUBLISH_DATE,
     ATTR_SEASON_NUMBER,
     ATTR_TITLE,
-    CONF_PODCAST_FEED_URL,
+    ATTR_SEARCH_TERM,
+    ATTR_FEED_URL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
@@ -107,6 +108,8 @@ class PodcastIndexSensor(CoordinatorEntity, SensorEntity):
             ATTR_PODCAST_TITLE: episode.get(ATTR_PODCAST_TITLE, ""),
             ATTR_EPISODE_NUMBER: episode.get(ATTR_EPISODE_NUMBER),
             ATTR_SEASON_NUMBER: episode.get(ATTR_SEASON_NUMBER),
+            ATTR_SEARCH_TERM: episode.get(ATTR_SEARCH_TERM, ""),
+            ATTR_FEED_URL: episode.get(ATTR_FEED_URL, ""),
             "guid": episode.get("guid", ""),
             "link": episode.get("link", ""),
         }

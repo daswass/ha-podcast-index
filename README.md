@@ -6,7 +6,7 @@ A Home Assistant integration that connects to the PodcastIndex API to fetch the 
 
 - Fetches the latest episode from any podcast feed via PodcastIndex API
 - Displays episode information as a sensor with rich attributes
-- Provides a service to play the latest episode on any media player
+- Provides a service to search for and play the latest episode of any podcast on any media player
 - Automatic updates every 5 minutes
 - Proper authentication with PodcastIndex API
 
@@ -24,7 +24,7 @@ A Home Assistant integration that connects to the PodcastIndex API to fetch the 
 
 You'll need the following information:
 
-1. **Podcast Feed URL**: The RSS feed URL of the podcast you want to track
+1. **Search Term**: A search term to find podcasts (e.g., "tech news", "comedy", "science")
 2. **API Credentials**: Your PodcastIndex API credentials (stored in secrets.yaml)
 
 ### Setting up API Credentials
@@ -57,40 +57,59 @@ The integration creates a sensor that shows:
   - `podcast_title`: Name of the podcast
   - `episode_number`: Episode number (if available)
   - `season_number`: Season number (if available)
+  - `search_term`: The search term used to find the podcast
+  - `feed_url`: The RSS feed URL of the podcast
 
 ### Service
 
-The integration provides a service to play the latest episode:
+The integration provides a single service for playing episodes:
 
-**Service**: `podcast_index.play_latest_episode`
+#### Search and Play
+
+**Service**: `podcast_index.search_and_play`
 
 **Parameters**:
 
 - `entity_id`: The media player entity to play the episode on
+- `search_term`: The search term to find the podcast
 
 **Example**:
 
 ```yaml
-# In an automation or script
-service: podcast_index.play_latest_episode
+# Search for "tech news" and play the latest episode
+service: podcast_index.search_and_play
 target:
-  entity_id: media_player.living_room_speaker
+  entity_id: media_player.kitchen_speaker
+data:
+  search_term: "tech news"
 ```
 
-### Automation Example
+### Automation Examples
 
 ```yaml
-# Play latest episode when arriving home
+# Search and play different podcasts based on time
 automation:
-  - alias: "Play Latest Podcast Episode"
+  - alias: "Morning Tech News"
     trigger:
-      platform: state
-      entity_id: person.your_name
-      to: "home"
+      platform: time
+      at: "08:00:00"
     action:
-      - service: podcast_index.play_latest_episode
+      - service: podcast_index.search_and_play
         target:
-          entity_id: media_player.kitchen_speaker
+          entity_id: media_player.bedroom_speaker
+        data:
+          search_term: "tech news"
+
+  - alias: "Evening Comedy"
+    trigger:
+      platform: time
+      at: "19:00:00"
+    action:
+      - service: podcast_index.search_and_play
+        target:
+          entity_id: media_player.living_room_speaker
+        data:
+          search_term: "comedy"
 ```
 
 ## Troubleshooting
@@ -100,7 +119,7 @@ automation:
 1. **"Failed to connect to PodcastIndex API"**
 
    - Verify your API credentials are correctly set in secrets.yaml
-   - Check that the podcast feed URL is valid and accessible
+   - Check that the search term is valid
    - Ensure your internet connection is working
 
 2. **"PodcastIndex API credentials not found in secrets.yaml"**
@@ -115,8 +134,8 @@ automation:
 
 3. **"No episodes found"**
 
-   - The podcast feed might not have any episodes
-   - The feed URL might be incorrect
+   - The search term might not return any results
+   - The podcast might not have any episodes
    - The podcast might be private or require authentication
 
 4. **Media player doesn't play the episode**
