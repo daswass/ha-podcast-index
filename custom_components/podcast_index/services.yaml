@@ -1,0 +1,14 @@
+play_latest_episode:
+  name: Play Latest Episode
+  description: Play the latest episode of the configured podcast on a media player
+  target:
+    entity:
+      integration: media_player
+  fields:
+    entity_id:
+      name: Media Player
+      description: The media player entity to play the episode on
+      selector:
+        entity:
+          domain: media_player
+      required: true 

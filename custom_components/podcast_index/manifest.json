@@ -1,0 +1,11 @@
+{
+  "domain": "podcast_index",
+  "name": "PodcastIndex",
+  "documentation": "https://github.com/daswass/ha-podcast-index",
+  "dependencies": [],
+  "codeowners": ["@daswass"],
+  "requirements": ["aiohttp>=3.8.0", "PyYAML>=5.1"],
+  "version": "1.0.0",
+  "config_flow": true,
+  "iot_class": "cloud_polling"
+}
