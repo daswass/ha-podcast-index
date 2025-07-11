@@ -102,7 +102,7 @@ class PodcastIndexAPI:
         # If the search term is numeric, treat it as a podcast id
         term = search_term or self.search_term
         if term and term.isdigit():
-            # Use the bypodcastid endpoint
+            # Use the byfeedid endpoint (not bypodcastid)
             session = await self._get_session()
             params = {
                 "id": term,
@@ -111,7 +111,7 @@ class PodcastIndexAPI:
             headers = self._generate_auth_headers()
             try:
                 async with session.get(
-                    f"{PODCAST_INDEX_BASE_URL}/episodes/bypodcastid",
+                    f"{PODCAST_INDEX_BASE_URL}/episodes/byfeedid",
                     params=params,
                     headers=headers,
                     timeout=aiohttp.ClientTimeout(total=30),

@@ -40,33 +40,30 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the PodcastIndex sensor platform."""
-    api = hass.data[DOMAIN][config_entry.entry_id]["api"]
-    name = hass.data[DOMAIN][config_entry.entry_id]["name"]
+    entry_data = hass.data[DOMAIN][config_entry.entry_id]
+    name = entry_data["name"]
+    coordinators = entry_data["coordinators"]
+    search_or_id_list = entry_data["search_or_id_list"]
 
-    coordinator = DataUpdateCoordinator(
-        hass,
-        _LOGGER,
-        name=f"{name} Latest Episode",
-        update_method=api.get_latest_episode,
-        update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
-    )
+    entities = []
+    for term in search_or_id_list:
+        coordinator = coordinators[term]
+        entities.append(PodcastIndexSensor(coordinator, name, term))
 
-    # Fetch initial data
-    await coordinator.async_config_entry_first_refresh()
-
-    async_add_entities([PodcastIndexSensor(coordinator, name)], True)
+    async_add_entities(entities, True)
 
 
 class PodcastIndexSensor(CoordinatorEntity, SensorEntity):
     """Representation of a PodcastIndex sensor."""
 
     def __init__(
-        self, coordinator: DataUpdateCoordinator, name: str
+        self, coordinator: DataUpdateCoordinator, name: str, term: str
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = f"{name} Latest Episode"
-        self._attr_unique_id = f"{name.lower().replace(' ', '_')}_latest_episode"
+        self._term = term
+        self._attr_name = f"{name} {term} Latest Episode"
+        self._attr_unique_id = f"{name.lower().replace(' ', '_')}_{term.lower().replace(' ', '_')}_latest_episode"
 
     @property
     def native_value(self) -> StateType:
@@ -108,7 +105,7 @@ class PodcastIndexSensor(CoordinatorEntity, SensorEntity):
             ATTR_PODCAST_TITLE: episode.get(ATTR_PODCAST_TITLE, ""),
             ATTR_EPISODE_NUMBER: episode.get(ATTR_EPISODE_NUMBER),
             ATTR_SEASON_NUMBER: episode.get(ATTR_SEASON_NUMBER),
-            ATTR_SEARCH_OR_ID: episode.get(ATTR_SEARCH_OR_ID, ""),
+            ATTR_SEARCH_OR_ID: self._term,
             ATTR_FEED_URL: episode.get(ATTR_FEED_URL, ""),
             "guid": episode.get("guid", ""),
             "link": episode.get("link", ""),
