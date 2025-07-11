@@ -80,15 +80,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Search for a podcast and play its latest episode."""
         entity_id = call.data.get("entity_id")
         search_term = call.data.get("search_term")
+        volume = call.data.get("volume")
+        
         if not entity_id:
             _LOGGER.error("No entity_id provided")
             return
         if not search_term:
             _LOGGER.error("No search_term provided")
             return
+            
         # Use the API for this entry
         api = hass.data[DOMAIN][entry.entry_id]["api"]
         try:
+            # First, unjoin all speakers
+            await hass.services.async_call(
+                "media_player",
+                "unjoin",
+                {"entity_id": entity_id},
+            )
+            _LOGGER.info("Unjoined speakers for %s", entity_id)
+            
+            # Set volume if provided
+            if volume is not None:
+                await hass.services.async_call(
+                    "media_player",
+                    "volume_set",
+                    {
+                        "entity_id": entity_id,
+                        "volume_level": volume / 100.0,  # Convert percentage to 0-1 scale
+                    },
+                )
+                _LOGGER.info("Set volume to %s%% for %s", volume, entity_id)
+            
             episode = await api.get_latest_episode(search_term)
             if not episode or not episode.get("audio_url"):
                 _LOGGER.error("No audio URL found for search term: %s", search_term)

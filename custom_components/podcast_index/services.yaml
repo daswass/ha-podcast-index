@@ -17,4 +17,14 @@ search_and_play:
       description: The search term to find the podcast
       selector:
         text:
-      required: true 
+      required: true
+    volume:
+      name: Volume
+      description: Optional volume level (0-100) to set before playing
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+      required: false 
