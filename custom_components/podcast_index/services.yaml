@@ -27,4 +27,40 @@ search_and_play:
           max: 100
           step: 1
           unit_of_measurement: "%"
-      required: false 
+      required: false
+
+add_search_term:
+  name: Add Search Term
+  description: Add a new podcast search term to a specific PodcastIndex integration entry
+  fields:
+    search_term:
+      name: Search Term
+      description: The new search term to add (e.g. 'tech news' or a podcast ID)
+      selector:
+        text:
+      required: true
+    entry_id:
+      name: PodcastIndex Integration
+      description: The specific PodcastIndex integration entry to add the search term to (required to specify which integration instance)
+      selector:
+        config_entry:
+          integration: podcast_index
+      required: true
+
+remove_search_term:
+  name: Remove Search Term
+  description: Remove a podcast search term from a specific PodcastIndex integration entry
+  fields:
+    search_term:
+      name: Search Term
+      description: The search term to remove (must match exactly)
+      selector:
+        text:
+      required: true
+    entry_id:
+      name: PodcastIndex Integration
+      description: The specific PodcastIndex integration entry to remove the search term from (required to specify which integration instance)
+      selector:
+        config_entry:
+          integration: podcast_index
+      required: true 

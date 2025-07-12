@@ -61,9 +61,9 @@ The integration creates a sensor that shows:
   - `search_or_id`: The search term or podcast ID used to find the podcast
   - `feed_url`: The RSS feed URL of the podcast
 
-### Service
+### Services
 
-The integration provides a single service for playing episodes:
+The integration provides several services for managing podcasts and playing episodes:
 
 #### Search and Play
 
@@ -74,6 +74,26 @@ The integration provides a single service for playing episodes:
 - `entity_id`: The media player entity to play the episode on
 - `search_term`: The search term or podcast ID to find the podcast (numeric values are treated as PodcastIndex podcast IDs)
 - `volume` (optional): Volume level (0-100) to set before playing. If not provided, the current volume is maintained.
+
+#### Add Search Term
+
+**Service**: `podcast_index.add_search_term`
+
+**Parameters**:
+
+- `search_term`: The new search term to add (e.g., "tech news" or a podcast ID)
+
+This service allows you to add additional podcast search terms to an existing PodcastIndex integration after the initial configuration. The integration will automatically reload to pick up the new search term and create a new sensor for it.
+
+#### Remove Search Term
+
+**Service**: `podcast_index.remove_search_term`
+
+**Parameters**:
+
+- `search_term`: The search term to remove (must match exactly)
+
+This service allows you to remove a podcast search term from an existing PodcastIndex integration. The integration will automatically reload to reflect the changes. Note: You cannot remove the last search term as at least one is required.
 
 **Example**:
 
@@ -150,6 +170,53 @@ automation:
         data:
           search_term: "evening news"
           volume: 75
+
+# Managing search terms dynamically
+automation:
+  - alias: "Add Weekend Podcast"
+    trigger:
+      platform: time
+      at: "06:00:00"
+      days_of_week: ["sat", "sun"]
+    action:
+      - service: podcast_index.add_search_term
+        target:
+          entity_id: sensor.podcastindex_tech_news_latest_episode
+        data:
+          search_term: "weekend edition"
+
+  - alias: "Remove Weekend Podcast"
+    trigger:
+      platform: time
+      at: "23:00:00"
+      days_of_week: ["sun"]
+    action:
+      - service: podcast_index.remove_search_term
+        target:
+          entity_id: sensor.podcastindex_tech_news_latest_episode
+        data:
+          search_term: "weekend edition"
+
+  - alias: "Add New Podcast from Input"
+    trigger:
+      platform: state
+      entity_id: input_text.new_podcast_search
+    condition:
+      condition: not
+      conditions:
+        - condition: template
+          value_template: "{{ states('input_text.new_podcast_search') == '' }}"
+    action:
+      - service: podcast_index.add_search_term
+        target:
+          entity_id: sensor.podcastindex_tech_news_latest_episode
+        data:
+          search_term: "{{ states('input_text.new_podcast_search') }}"
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.new_podcast_search
+        data:
+          value: ""
 ```
 
 ## Troubleshooting

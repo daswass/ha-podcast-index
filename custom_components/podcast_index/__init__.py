@@ -75,7 +75,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await coordinator.async_config_entry_first_refresh()
         hass.data[DOMAIN][entry.entry_id]["coordinators"][term] = coordinator
 
-    # Register only the search_and_play service
+    # Register services
     async def async_search_and_play(call: ServiceCall) -> None:
         """Search for a podcast and play its latest episode."""
         entity_id = call.data.get("entity_id")
@@ -129,8 +129,113 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception as ex:
             _LOGGER.error("Failed to search and play episode: %s", ex)
 
+    async def async_add_search_term(call: ServiceCall) -> None:
+        """Add a new search term to the existing configuration."""
+        search_term = call.data.get("search_term")
+        target_entry_id = call.data.get("entry_id")
+        
+        if not search_term:
+            _LOGGER.error("No search_term provided")
+            return
+            
+        search_term = search_term.strip()
+        if not search_term:
+            _LOGGER.error("Empty search term provided")
+            return
+        
+        # Check if this service call is meant for this entry
+        if target_entry_id and target_entry_id != entry.entry_id:
+            # This service call is not meant for this entry, ignore it
+            return
+        
+        # Check if term already exists
+        entry_name = hass.data[DOMAIN][entry.entry_id]["name"]
+        if search_term in hass.data[DOMAIN][entry.entry_id]["search_or_id_list"]:
+            _LOGGER.warning("Search term '%s' already exists in integration '%s'", search_term, entry_name)
+            return
+            
+        try:
+            # Test the API connection with the new term
+            api = PodcastIndexAPI(api_key, api_secret, search_term)
+            await api.test_connection()
+            await api.close()
+            
+            # Get current search terms and add the new one
+            current_terms = hass.data[DOMAIN][entry.entry_id]["search_or_id_list"]
+            new_terms = current_terms + [search_term]
+            
+            # Update the config entry with the new search terms
+            new_data = entry.data.copy()
+            new_data[CONF_SEARCH_OR_ID] = ", ".join(new_terms)
+            
+            hass.config_entries.async_update_entry(entry, data=new_data)
+            
+            # Reload the integration to pick up the new search term
+            await hass.config_entries.async_reload(entry.entry_id)
+            
+            _LOGGER.info("Added new search term '%s' to integration '%s' and reloaded", search_term, entry_name)
+                
+        except Exception as ex:
+            _LOGGER.error("Failed to add search term '%s': %s", search_term, ex)
+
+    async def async_remove_search_term(call: ServiceCall) -> None:
+        """Remove a search term from the existing configuration."""
+        search_term = call.data.get("search_term")
+        target_entry_id = call.data.get("entry_id")
+        
+        if not search_term:
+            _LOGGER.error("No search_term provided")
+            return
+            
+        search_term = search_term.strip()
+        if not search_term:
+            _LOGGER.error("Empty search term provided")
+            return
+        
+        # Check if this service call is meant for this entry
+        if target_entry_id and target_entry_id != entry.entry_id:
+            # This service call is not meant for this entry, ignore it
+            return
+        
+        # Check if term exists
+        entry_name = hass.data[DOMAIN][entry.entry_id]["name"]
+        if search_term not in hass.data[DOMAIN][entry.entry_id]["search_or_id_list"]:
+            _LOGGER.warning("Search term '%s' does not exist in integration '%s'", search_term, entry_name)
+            return
+            
+        try:
+            # Get current search terms and remove the specified one
+            current_terms = hass.data[DOMAIN][entry.entry_id]["search_or_id_list"]
+            new_terms = [term for term in current_terms if term != search_term]
+            
+            if not new_terms:
+                _LOGGER.error("Cannot remove the last search term. At least one search term is required.")
+                return
+            
+            # Update the config entry with the new search terms
+            new_data = entry.data.copy()
+            new_data[CONF_SEARCH_OR_ID] = ", ".join(new_terms)
+            
+            hass.config_entries.async_update_entry(entry, data=new_data)
+            
+            # Reload the integration to pick up the changes
+            await hass.config_entries.async_reload(entry.entry_id)
+            
+            _LOGGER.info("Removed search term '%s' from integration '%s' and reloaded", search_term, entry_name)
+                
+        except Exception as ex:
+            _LOGGER.error("Failed to remove search term '%s': %s", search_term, ex)
+
     hass.services.async_register(
         DOMAIN, "search_and_play", async_search_and_play
+    )
+    
+    hass.services.async_register(
+        DOMAIN, "add_search_term", async_add_search_term
+    )
+    
+    hass.services.async_register(
+        DOMAIN, "remove_search_term", async_remove_search_term
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
