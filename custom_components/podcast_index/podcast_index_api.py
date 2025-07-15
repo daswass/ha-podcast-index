@@ -155,6 +155,7 @@ class PodcastIndexAPI:
                             episode_data.update({
                                 "podcast_title": podcast.get("title", ""),
                                 "feed_url": podcast.get("feed_url", ""),
+                                "podcast_icon": podcast.get("image", ""),
                             })
                         episode_data.update({
                             "podcast_id": term,
@@ -204,6 +205,7 @@ class PodcastIndexAPI:
                     episode_data.update({
                         "podcast_title": podcast.get("title", ""),
                         "feed_url": podcast.get("feed_url", ""),
+                        "podcast_icon": podcast.get("image", ""),
                         "search_term": term,
                     })
                     return episode_data
