@@ -27,6 +27,7 @@ from .const import (
     ATTR_TITLE,
     ATTR_SEARCH_OR_ID,
     ATTR_FEED_URL,
+    ATTR_HOURS_SINCE_PUBLISH,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
@@ -105,6 +106,18 @@ class PodcastIndexSensor(CoordinatorEntity, SensorEntity):
             except (ValueError, TypeError):
                 duration = None
 
+        # Calculate hours since publish
+        hours_since_publish = None
+        publish_timestamp = episode.get(ATTR_PUBLISH_DATE)
+        if publish_timestamp:
+            try:
+                publish_datetime = datetime.fromtimestamp(publish_timestamp)
+                current_datetime = datetime.now()
+                time_difference = current_datetime - publish_datetime
+                hours_since_publish = round(time_difference.total_seconds() / 3600, 1)
+            except (ValueError, TypeError):
+                hours_since_publish = None
+
         return {
             ATTR_TITLE: episode.get(ATTR_TITLE, ""),
             ATTR_DESCRIPTION: episode.get(ATTR_DESCRIPTION, ""),
@@ -116,6 +129,7 @@ class PodcastIndexSensor(CoordinatorEntity, SensorEntity):
             ATTR_SEASON_NUMBER: episode.get(ATTR_SEASON_NUMBER),
             ATTR_SEARCH_OR_ID: self._term,
             ATTR_FEED_URL: episode.get(ATTR_FEED_URL, ""),
+            ATTR_HOURS_SINCE_PUBLISH: hours_since_publish,
             "guid": episode.get("guid", ""),
             "link": episode.get("link", ""),
         }
