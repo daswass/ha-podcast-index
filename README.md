@@ -52,7 +52,7 @@ The integration creates a sensor that shows:
 - **Attributes**:
   - `title`: Episode title
   - `description`: Episode description
-  - `publish_date`: When the episode was published
+  - `publish_date`: When the episode was published (ISO format)
   - `duration`: Episode duration in HH:MM:SS format
   - `audio_url`: Direct link to the audio file
   - `podcast_title`: Name of the podcast (now properly populated for both search terms and podcast IDs)
@@ -60,6 +60,8 @@ The integration creates a sensor that shows:
   - `season_number`: Season number (if available)
   - `search_or_id`: The search term or podcast ID used to find the podcast
   - `feed_url`: The RSS feed URL of the podcast
+  - `hours_since_publish`: Hours since the episode was published (rounded to 1 decimal place)
+  - `podcast_icon`: URL to the podcast's icon/logo image
 
 ### Services
 
@@ -121,103 +123,185 @@ data:
   volume: 50
 ```
 
-### Automation Examples
+## Dashboard Configuration
+
+### Example Dashboard with Auto-Entities
+
+Here's an example of how to create a beautiful dashboard using the `auto-entities` and `template-entity-row` custom cards to display your podcast sensors in an organized, visually appealing way:
+
+![Podcast Dashboard Example](custom_components/images/podcasts-card.png)
 
 ```yaml
-# Search and play different podcasts based on time
-automation:
-  - alias: "Morning Tech News"
-    trigger:
-      platform: time
-      at: "08:00:00"
-    action:
-      - service: podcast_index.search_and_play
-        target:
-          entity_id: media_player.bedroom_speaker
-        data:
-          search_term: "tech news"
-
-  - alias: "Evening Comedy"
-    trigger:
-      platform: time
-      at: "19:00:00"
-    action:
-      - service: podcast_index.search_and_play
-        target:
-          entity_id: media_player.living_room_speaker
-        data:
-          search_term: "comedy"
-
-  - alias: "Play by Podcast ID"
-    trigger:
-      platform: time
-      at: "21:00:00"
-    action:
-      - service: podcast_index.search_and_play
-        target:
-          entity_id: media_player.office_speaker
-        data:
-          search_term: "1234567"
-
-  - alias: "Evening News with Volume"
-    trigger:
-      platform: time
-      at: "18:00:00"
-    action:
-      - service: podcast_index.search_and_play
-        target:
-          entity_id: media_player.living_room_speaker
-        data:
-          search_term: "evening news"
-          volume: 75
-
-# Managing search terms dynamically
-automation:
-  - alias: "Add Weekend Podcast"
-    trigger:
-      platform: time
-      at: "06:00:00"
-      days_of_week: ["sat", "sun"]
-    action:
-      - service: podcast_index.add_search_term
-        target:
-          entity_id: sensor.podcastindex_tech_news_latest_episode
-        data:
-          search_term: "weekend edition"
-
-  - alias: "Remove Weekend Podcast"
-    trigger:
-      platform: time
-      at: "23:00:00"
-      days_of_week: ["sun"]
-    action:
-      - service: podcast_index.remove_search_term
-        target:
-          entity_id: sensor.podcastindex_tech_news_latest_episode
-        data:
-          search_term: "weekend edition"
-
-  - alias: "Add New Podcast from Input"
-    trigger:
-      platform: state
-      entity_id: input_text.new_podcast_search
-    condition:
-      condition: not
-      conditions:
-        - condition: template
-          value_template: "{{ states('input_text.new_podcast_search') == '' }}"
-    action:
-      - service: podcast_index.add_search_term
-        target:
-          entity_id: sensor.podcastindex_tech_news_latest_episode
-        data:
-          search_term: "{{ states('input_text.new_podcast_search') }}"
-      - service: input_text.set_value
-        target:
-          entity_id: input_text.new_podcast_search
-        data:
-          value: ""
+type: vertical-stack
+cards:
+  - type: custom:auto-entities
+    card:
+      type: entities
+      title: Finance
+      icon: mdi:finance
+    filter:
+      include:
+        - domain: sensor
+          integration: podcast_index
+          attributes:
+            hours_since_publish: <=48
+            friendly_name: /^Finance/
+          options:
+            type: custom:template-entity-row
+            image: "{{ state_attr(config.entity, 'podcast_icon') }}"
+            name: >-
+              {{ state_attr(config.entity, 'friendly_name').split(' ')[1:-2] |
+              join(' ') }}
+            secondary: >
+              {% set total_hours = state_attr(config.entity,
+              'hours_since_publish') | float %} {% if total_hours < 24 %}
+                {{ total_hours | round(1) }}h
+              {% else %}
+                {% set days = (total_hours / 24) | int %}
+                {% set remaining_hours = (total_hours % 24) | round(0) %}
+                {{ days }}d
+                {% if remaining_hours > 0 %}
+                  {{ remaining_hours }}h
+                {% endif %}
+              {% endif %}
+            hold_action:
+              action: more-info
+            double_tap_action:
+              action: more-info
+            tap_action: |
+              {
+                "action": "call-service",
+                "service": "media_player.play_media",
+                "target": {
+                  "device_id": "YOUR_SPEAKER_DEVICE"
+                },
+                "data": {
+                  "media_content_id": "{{ state_attr(config.entity, 'audio_url') | default('') }}",
+                  "media_content_type": "music"
+                }
+              }
+    sort:
+      method: attribute
+      attribute: hours_since_publish
+      numeric: true
+  - type: custom:auto-entities
+    card:
+      type: entities
+      title: Health
+      icon: mdi:flask-outline
+    filter:
+      include:
+        - domain: sensor
+          integration: podcast_index
+          attributes:
+            hours_since_publish: <=168
+            friendly_name: /^BioHack/
+          options:
+            type: custom:template-entity-row
+            image: "{{ state_attr(config.entity, 'podcast_icon') }}"
+            name: >-
+              {{ state_attr(config.entity, 'friendly_name').split(' ')[1:-2] |
+              join(' ') }}
+            secondary: >
+              {% set total_hours = state_attr(config.entity,
+              'hours_since_publish') | float %} {% if total_hours < 24 %}
+                {{ total_hours | round(1) }}h
+              {% else %}
+                {% set days = (total_hours / 24) | int %}
+                {% set remaining_hours = (total_hours % 24) | round(0) %}
+                {{ days }}d
+                {% if remaining_hours > 0 %}
+                  {{ remaining_hours }}h
+                {% endif %}
+              {% endif %}
+            hold_action:
+              action: more-info
+            double_tap_action:
+              action: more-info
+            tap_action: |
+              {
+                "action": "call-service",
+                "service": "media_player.play_media",
+                "target": {
+                  "device_id": "YOUR_SPEAKER_DEVICE"
+                },
+                "data": {
+                  "media_content_id": "{{ state_attr(config.entity, 'audio_url') | default('') }}",
+                  "media_content_type": "music"
+                }
+              }
+    sort:
+      method: attribute
+      attribute: hours_since_publish
+      numeric: true
+  - type: custom:auto-entities
+    card:
+      type: entities
+      title: Music
+      icon: mdi:music
+    filter:
+      include:
+        - domain: sensor
+          integration: podcast_index
+          attributes:
+            hours_since_publish: <=168
+            friendly_name: /Music/
+          options:
+            type: custom:template-entity-row
+            image: "{{ state_attr(config.entity, 'podcast_icon') }}"
+            name: >-
+              {{ state_attr(config.entity, 'friendly_name').split(' ')[2:-2] |
+              join(' ') }}
+            secondary: >
+              {% set total_hours = state_attr(config.entity,
+              'hours_since_publish') | float %} {% if total_hours < 24 %}
+                {{ total_hours | round(1) }}h
+              {% else %}
+                {% set days = (total_hours / 24) | int %}
+                {% set remaining_hours = (total_hours % 24) | round(0) %}
+                {{ days }}d
+                {% if remaining_hours > 0 %}
+                  {{ remaining_hours }}h
+                {% endif %}
+              {% endif %}
+            hold_action:
+              action: more-info
+            double_tap_action:
+              action: more-info
+            tap_action: |
+              {
+                "action": "call-service",
+                "service": "media_player.play_media",
+                "target": {
+                  "device_id": "YOUR_SPEAKER_DEVICE"
+                },
+                "data": {
+                  "media_content_id": "{{ state_attr(config.entity, 'audio_url') | default('') }}",
+                  "media_content_type": "music"
+                }
+              }
+    sort:
+      method: attribute
+      attribute: hours_since_publish
+      numeric: true
+grid_options:
+  columns: full
+  rows: auto
 ```
+
+### Required Custom Cards
+
+To use this dashboard configuration, you'll need to install these custom cards:
+
+1. **Auto-Entities**: [HACS](https://hacs.xyz/docs/categories/frontend) or [GitHub](https://github.com/thomasloven/lovelace-auto-entities)
+2. **Template-Entity-Row**: [HACS](https://hacs.xyz/docs/categories/frontend) or [GitHub](https://github.com/thomasloven/lovelace-template-entity-row)
+
+### Configuration Notes
+
+- **Device ID**: Replace `"YOUR_SPEAKER_DEVICE"` with your actual media player device ID
+- **Filter Patterns**: Adjust the `friendly_name` regex patterns to match your podcast sensor names
+- **Time Filters**: Modify the `hours_since_publish` values to show episodes from different time periods
+- **Categories**: Add or modify the card sections to match your podcast categories
 
 ## Troubleshooting
 
